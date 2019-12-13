@@ -78,7 +78,8 @@
          [quv (quarter u v)])
     (or (< qxy quv)  ; két térfél
         (and (= qxy quv) (even? qxy) (< (pythagoras x y) (pythagoras u v)))
-        (and (= qxy quv) (odd?  qxy) (> (* (abs y) (abs u)) (* (abs v) (abs x))))
+        (and (= qxy quv) (or (= qxy 1 ) (= qxy 5)) (> (* (abs y) (abs u)) (* (abs v) (abs x))))
+        (and (= qxy quv) (or (= qxy 3 ) (= qxy 7)) (< (* (abs y) (abs u)) (* (abs v) (abs x))))
         (and (= qxy quv) (odd? qxy) (= (* (abs y) (abs u)) (* (abs v) (abs x)))
              (< (pythagoras x y) (pythagoras u v))))))
 
@@ -92,22 +93,26 @@
 ;(define xXx 11)
 ;(define yYy 13)
 ;(define ps (laser "d10e.txt" xXx yYy))
-(define xXx 8)
-(define yYy 3)
-(define ps (laser "d10f.txt" xXx yYy))
+;(define xXx 8)
+;(define yYy 3)
+;(define ps (laser "d10f.txt" xXx yYy))
 
 (define (my-count n head tail liat)
   (cond
-    [(zero? n) head]
+    [(zero? n) (list (+ xXx (first head)) (+ yYy (second head)))]
     [(and (empty? tail) (empty? liat)) head]
     [(empty? tail)
      (let ([new-tail (reverse liat)])
        (my-count (sub1 n)  (first new-tail)(rest new-tail) '()))]
     [(and (= (* (first head) (cadar tail)) (* (second head) (caar tail)))
           (= (quarter (first head) (second head)) (quarter (caar tail) (cadar tail))))
+     (printf "~a. @ ~a,~a\n" (- 200 n) (+ (first head) xXx) (+ (second head) yYy))
      (my-count n head (rest tail) (cons (first tail) liat))]
     [else 
-      (printf "~a. @ ~a,~a\n" (- 29 n) (+ (first head) xXx) (+ (second head) yYy))
+      (printf "~a. @ ~a,~a\n" (- 200 n) (+ (first head) xXx) (+ (second head) yYy))
       (my-count (sub1 n) (first tail) (rest tail) liat)]))
 
-(my-count 30 (first ps) (rest ps) '())
+(define xXx 13)
+(define yYy 17)
+(define ps (laser "d10.txt" xXx yYy))
+(my-count 199 (first ps) (rest ps) '())
