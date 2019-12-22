@@ -24,96 +24,127 @@
     [(= mode 2) (+ (hash-ref memory addr) rb)]))
 
 (define (step pc rb memory in out type)
-  ;(printf "@ (~a,~a) execute ~a \n"  pc rb (hash-ref! memory pc 0))
   (let* [(next (hash-ref memory pc 0))
          (op-code (remainder next 100))]
     (cond [(= op-code 1) ; ADD
-           ;(printf "@ (~a,~a) execute ADD (~a : ~a ~a ~a) \n"  pc rb
-           ;        (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0) (hash-ref! memory (+ 2 pc) 0) (hash-ref! memory (+ 3 pc) 0))
            (let* ([op1 (get-arg memory (get-mode next 1) (+ 1 pc) rb)]
                   [op2 (get-arg memory (get-mode next 2) (+ pc 2) rb)]
                   [addr (get-addr memory (get-mode next 3) (+ pc 3) rb)])
              (hash-set! memory addr (+ op1 op2))
              (step (+ 4 pc) rb memory in out type))]
           [(= op-code 2) ; MUL
-           ;(printf "@ (~a,~a) execute MUL (~a : ~a ~a ~a) \n"  pc rb
-           ;        (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0) (hash-ref! memory (+ 2 pc) 0) (hash-ref! memory (+ 3 pc) 0))
            (let* ([op1 (get-arg memory (get-mode next 1) (+ 1 pc) rb)]
                   [op2 (get-arg memory (get-mode next 2) (+ pc 2) rb)]
                   [addr (get-addr memory (get-mode next 3) (+ pc 3) rb)])
              (hash-set! memory addr (* op1 op2))
              (step (+ 4 pc) rb memory in out type))]
           [(= op-code 3)                 ; INPUT
-           ;(printf "@ (~a,~a) execute IN (~a : ~a) \n"  pc rb (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0))
            (let* ([addr (get-addr memory (get-mode next 1) (+ pc 1) rb)])
              (hash-set! memory addr (first in))
-             ;(printf "write ~a at ~a mode: ~a \n" (first in) addr (get-mode next 1))
              (step (+ 2 pc) rb memory (rest in) out type))]
           [(= op-code 4) ; OUTPUT
-           ;(printf "@ (~a,~a) execute OUT (~a : ~a) \n"  pc rb (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0))
            (let* ([value (get-arg memory (get-mode next 1) (+ pc 1) rb)])
-             ;(printf "Output: v: ~a m:~a argv: ~a\n " value (get-mode next 1) (hash-ref memory (+ pc 1)))
              (step (+ 2 pc) rb memory in (cons value out) type))]
           [(= op-code 5)                 ; J-True
-           ;(printf "@ (~a,~a) execute JNZ (~a : ~a ~a) \n"  pc rb (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0) (hash-ref! memory (+ 2 pc) 0))
            (let* ([value (get-arg memory (get-mode next 1) (+ 1 pc) rb)]
                   [addr  (get-arg memory (get-mode next 2) (+ pc 2) rb)])
              (if (zero? value)
                  (step (+ 3 pc) rb memory in out type)
                  (step addr rb memory in out type)))]
           [(= op-code 6)                 ; J-False
-           ;(printf "@ (~a,~a) execute JZ (~a : ~a ~a) \n"  pc rb (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0) (hash-ref! memory (+ 2 pc) 0))
            (let* ([value (get-arg memory (get-mode next 1) (+ 1 pc) rb)]
                   [addr  (get-arg memory (get-mode next 2) (+ 2 pc) rb)])
              (if (zero? value)
                  (step addr rb memory in out type)
                  (step (+ 3 pc) rb memory in out type)))]
           [(= (remainder next 100) 7)                 ; less-than
-           ;(printf "@ (~a,~a) execute < (~a : ~a ~a ~a) \n"  pc rb (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0) (hash-ref! memory (+ 2 pc) 0) (hash-ref! memory (+ 3 pc) 0))
            (let* ([op1 (get-arg memory (get-mode next 1) (+ 1 pc) rb)]
                   [op2 (get-arg memory (get-mode next 2) (+ 2 pc) rb)]
                   [addr (get-addr memory (get-mode next 3) (+ pc 3) rb)])
              (hash-set! memory addr (if (< op1 op2) 1 0))
              (step (+ 4 pc) rb memory in out type))]
           [(= op-code 8)                 ; equal
-           ;(printf "@ (~a,~a) execute = (~a : ~a ~a ~a) \n"  pc rb (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0) (hash-ref! memory (+ 2 pc) 0) (hash-ref! memory (+ 3 pc) 0))
            (let* ([op1 (get-arg memory (get-mode next 1) (+ 1 pc) rb)]
                   [op2 (get-arg memory (get-mode next 2) (+ 2 pc) rb)]
                   [addr (get-addr memory (get-mode next 3) (+ pc 3) rb)])
-             ;(printf "= ~a ~a ~a\n" op1 op2 addr)
              (hash-set! memory addr (if (= op1 op2) 1 0))
              (step (+ 4 pc) rb memory in out type))]
           [(= op-code 9)
-           ;(printf "@ (~a,~a) execute MB (~a : ~a) \n"  pc rb (hash-ref! memory pc 0) (hash-ref! memory (+ 1 pc) 0))
            (let ([op1 (get-arg memory (get-mode next 1) (+ 1 pc) rb)])
              (step (+ 2 pc) (+ op1 rb) memory in out type))]
           [else (if (equal? type 'debug) memory (reverse out))])))
 
-;(module+ test
-;  (require rackunit)
-;  (check-equal? (step 0 0 (my-hash '(109 1 204 -1 1001 100 1 100 1008 100 16 101 1006 101 0 99)) '() '() 'run) '(109 1 204 -1 1001 100 1 100 1008 100 16 101 1006 101 0 99))
-;  (check-equal? (step 0 0 (my-hash '(1102 34915192 34915192 7 4 7 99 0)) '() '() 'run) '(1219070632396864))
-;  (check-equal? (step 0 0 (my-hash '(104 1125899906842624 99)) '() '() 'run) '(1125899906842624)))
+(define (list->pic lst line others)
+  (cond
+    [(empty? lst) (reverse (cons (apply string (reverse line)) others))]
+    [(= (first lst) 46) (list->pic (rest lst) (cons #\. line) others)]
+    [(= (first lst) 35) (list->pic (rest lst) (cons #\# line) others)]
+    [(= (first lst) 94) (list->pic (rest lst) (cons #\^ line) others)]
+    [(= (first lst) 10) (list->pic (rest lst) '()  (cons (apply string (reverse line)) others))]))
+
+(define (list->pairs lst row col pairs)
+  (cond
+    [(empty? lst) pairs]
+    [(= (first lst) 46) (list->pairs (rest lst) row (add1 col) pairs)]
+    [(= (first lst) 35) (list->pairs (rest lst) row (add1 col) (cons (cons col row) pairs))]
+    [(= (first lst) 94) (printf "~a ~a\n" col row)
+                        (list->pairs (rest lst) row (add1 col) pairs)]
+    [(= (first lst) 10) (list->pairs (rest lst) (add1 row) 0 pairs)]))
+
+(define (neighbours pair my-map)
+  (let ([x (car pair)][y (cdr pair)])
+    (and (= (hash-ref my-map (cons (sub1 x) y) 9) 1)
+         (= (hash-ref my-map (cons (add1 x) y) 9) 1)
+         (= (hash-ref my-map (cons x (sub1 y)) 9) 1)
+         (= (hash-ref my-map (cons x (add1 y)) 9) 1))))
 
 (define (puzzle file-name start)
-  (step 0 0 (my-hash (numbers file-name)) (list start) '() 'run))
+  (let* ([output (step 0 0 (my-hash (numbers file-name)) (list start) '() 'run)]
+         [pairs (list->pairs output 0 0 '())]
+         [my-map (for/hash ([p (in-list pairs)]) (values p 1))]
+         [sections (for/list ([(k v) (in-hash my-map)] #:when (neighbours k my-map)) k)])
+    (apply + (map (λ (p) (* (car p) (cdr p))) sections))))
 
-;(puzzle "d09.txt" 1)
-;(puzzle "d09.txt" 2)
+;(puzzle "d17.txt" 1)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define dx '(0 1 0 -1))
+(define dy '(-1 0 1 0))
 
-; Day #13
+(define (next x y dir)
+  (let ([nx (list-ref dx dir)] [ny (list-ref dy dir)]) (cons (+ x nx) (+ y ny))))
 
-(define (plot hs lst)
-  ;(printf "~a\n~a\n" hs lst)
-  (cond
-    [(empty? lst) hs]
-    [else (begin
-            (hash-set! hs (cons (first lst) (second lst)) (third lst))
-            (plot hs (cdddr lst)))]))
+(define (search-path x y dir last other my-map)
+  ;(printf "~a:~a/~a\n" x y dir)
+  (let ([nxy (next x y dir)]
+        [lxy (next x y (modulo (sub1 dir) 4))]
+        [rxy (next x y (modulo (add1 dir) 4))])
+    (cond
+      [(= (hash-ref my-map nxy 0) 1) (search-path (car nxy) (cdr nxy) dir (add1 last) other my-map)]
+      [(= (hash-ref my-map lxy 0) 1) (search-path (car lxy) (cdr lxy) (modulo (sub1 dir) 4) 1 (cons "L" (cons last other)) my-map)]
+      [(= (hash-ref my-map rxy 0) 1) (search-path (car rxy) (cdr rxy) (modulo (add1 dir) 4) 1 (cons "R" (cons last other)) my-map)]
+      [else (cons last other)])))
 
-(define (day13 file-name)
-  (let* ([picture (step 0 0 (my-hash (numbers file-name)) '() '() 'run)]
-         [my-hash (plot (make-hash) picture)])
-    (printf "~a\n" (length (filter (lambda (x) (= x 2)) (hash-values my-hash))))))
+(define (search file-name start)
+  (let* ([output (step 0 0 (my-hash (numbers file-name)) (list start) '() 'run)]
+         [pairs (list->pairs output 0 0 '())]
+         [my-map (for/hash ([p (in-list pairs)]) (values p 1))])
+    (print my-map)
+    (reverse (search-path 0 10 0 1 '() my-map))))
+
+;(search "d17.txt" 1)
      
-  
+(define (draw-puzzle file-name start)
+  (let* ([output (step 0 0 (my-hash (numbers file-name)) (list start) '() 'run)]
+         [pic (list->pic output '() '())])
+    pic))
+
+;movement program:
+;A,B,A,C,A,B,C,C,A,B
+;R,8,L,10,R,8
+;R,12,R,8,L,8,L,12
+;L,12,L,10,L,8
+;n
+
+(define (puzzle2 file-name)
+  (step 0 0 (my-hash (cons 2 (rest (numbers file-name)))) '(65 44 66 44 65 44 67 44 65 44 66 44 67 44 67 44 65 44 66 10 82 44 56 44 76 44 49 48 44 82 44 56 10 82 44 49 50 44 82 44 56 44 76 44 56 44 76 44 49 50 10 76 44 49 50 44 76 44 49 48 44 76 44 56 10 110 10)  '() 'run))
+;(puzzle2 "d17.txt") ; -> 833429
